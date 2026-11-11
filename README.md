@@ -1,52 +1,80 @@
 # PS3EyeDirectShow
-Windows DirectShow source filter for the PS3 Eye Camera via WinUSB (32 / 64 bit)
 
-This package is an extension of [https://github.com/inspirit/PS3EYEDriver/](https://github.com/inspirit/PS3EYEDriver/), which is itself a port of the PS3 Eye Linux driver to Windows. This project wraps that code into a DirectShow source filter so that it behaves like a USB camera with a native Windows driver. Any application that goes through the standard DirectShow API to connect to a webcam should (in theory) be able to use this driver. This code has only had limited testing so there may be compatibility issues with some apps.
+Windows DirectShow source filters for the Sony PS3 Eye, in 32-bit and 64-bit applications.
+This fork starts from [jkevin/PS3EyeDirectShow](https://github.com/jkevin/PS3EyeDirectShow)
+and its Linux-derived [PS3EYEDriver](https://github.com/jkevin/PS3EYEDriver) backend.
+Fork changes began on 2026-11-11. The original license and notices are retained.
 
-## User Space WinUSB Based Driver
-This project makes use of the generic WinUSB driver to communicate with the camera. This has several advantages and disadvantages compared to a native camera driver. The biggest advantage is all of the code runs in user space instead of kernel space. This means any flaws in this driver will only affect the program that's using the camera instead of crashing the entire operating system. The part that runs in kernel space is the WinUSB driver and it's a stable component provided by Microsoft. It provides a generic way for user space programs to communicate with the device.
+The first changes harden media negotiation, sample writes, COM property handling,
+and installer scope. They do **not** add resolution beyond the sensor's native
+640x480, Windows Camera compatibility, or new image controls.
 
-Another big advantage of a user space driver is it's much easier to directly make use of other libraries such as libusb and the github project that this driver is based on.
+## Application compatibility and audio
 
-On the other hand native camera drivers have slightly better performance. Also Windows will automatically make those cameras available via the DirectShow API (both 32 and 64 bit) as well as Windows Media Foundation. There isn't any need to provide a custom DirectShow or WMF source for a native camera.
+| Use | Support |
+| --- | --- |
+| OBS and other DirectShow applications | Video through an existing WinUSB camera binding. |
+| Video calls | Select PS3 Eye Universal when supported, or route OBS to OBS Virtual Camera. App support varies. |
+| Windows Camera / Media Foundation applications | No Media Foundation source is implemented. DirectShow registration alone is insufficient. |
+| Microphone | The USB audio interface uses the Windows USB Audio driver separately. |
+| OBS Virtual Camera audio | Video only. Select the USB microphone separately in the calling app. |
 
-## 32 / 64 bit
-This project provides both a 32 bit and 64 bit source filter. Every application that uses a DirectShow camera must load its source filter library (usually a wrapper to a native camera provided by Microsoft). 32 bit applications require 32 bit libraries, and 64 bit applications require 64 bit libraries. Thus if the source filter is only provided as a 32 bit library the camera can only be used by 32 bit applications.
+Avoid opening the physical PS3 Eye simultaneously in multiple applications. OBS
+Virtual Camera can serve a calling app while OBS owns the physical camera. Remote
+Desktop audio redirection can hide the physical microphone from a session; device
+detection alone does not confirm usable audio capture there.
 
-There's another PS3 Eye driver by [Code Laboratories](https://codelaboratories.com/) that seems to take a similar approach to this driver in that it provides a custom DirectShow source filter instead of using the default wrapper. That driver is more mature and well tested than this one, but it only provides a 32 bit source filter and won't work with 64 bit apps.
+For viewing/recording, start with 640x480 at 30 fps and good lighting. Higher frame
+rates shorten available exposure time. Manual exposure/gain and white-balance
+controls are planned; the current filter enables automatic gain and white balance.
 
-Some examples of 64 bit DirectShow applications:
-- [ViewTracker](https://store.steampowered.com/app/929270/ViewTracker/)
-- [OBS Studio](https://obsproject.com/)
-- [VLC media player](https://www.videolan.org/vlc/)
+## Build and verify
 
-## Installing
+Requirements: Windows, PowerShell 7, Visual Studio 2022 C++ build tools, and a
+Windows 10/11 SDK. Build commands do not register a filter or install software.
 
-The easiest way to get started with this driver is to head to the [releases section](https://github.com/jkevin/PS3EyeDirectShow/releases) and download the installer. It will install the DirectShow filters as well as a generic WinUSB driver. If it detects that the Code Laboratories driver is already installed it will only install a 64 bit DirectShow filter. The driver component provided by Code Laboratories is WinUSB compatible so there isn't any need to install another one.
-
-## Compiling From Source
-
-Requirements:
-- Visual Studio 2017
-- Windows 10 SDK
-- WIX
-
-First clone the repo and init the submodules:
+```powershell
+git submodule update --init --recursive
+pwsh -File scripts/build-and-test.ps1 -Platform x64
+pwsh -File scripts/build-and-test.ps1 -Platform Win32
 ```
-$ git clone https://github.com/jkevin/PS3EyeDirectShow.git
-$ cd PS3EyeDirectShow
-$ git submodule init
-$ git submodule update
+
+Each command builds the production DLL and runs 148 capture-contract checks using
+the production pin and real DirectShow allocators. These tests need no webcam or
+administrator access and save no images/audio. The tests fail against the original
+upstream pin on truncated VIDEOINFOHEADER acceptance.
+
+The build consistently uses the dynamic C runtime and enables stack cookies,
+Control Flow Guard, DEP and ASLR. Pinned dependencies still need further review
+and updating; see [the review](docs/REVIEW.md).
+
+## Filter-only installer preview
+
+After both architectures are built, use WiX 3.14.1 binaries:
+
+```powershell
+pwsh -File scripts/build-installer.ps1 -WixBinPath C:\path\to\wix314
 ```
 
-Open `libusb/msvc/libusb_2017.sln` in Visual Studio 2017. If you don't have the Windows 8.1 SDK, change the SDK target to Windows 10 in all of the libusb project properties. Build the solution with all desired configurations. Next open PS3EyeDriverMSVC.sln and build the desired configs again.
+This builds and validates `artifacts/installer/PS3EyeFilters-preview.msi`. It also
+inspects the compiled package to require exactly the two filter DLLs and reject
+USB-driver/certificate custom actions. It does not run the installer.
 
-If you would like to make the compiled DirectShow filters available to other applications, run `c:\windows\system32\regsvr32.exe <path to filter dll>` from an administrator command prompt. If you have run the installer make sure to uninstall the package before doing this. Use `c:\windows\system32\regsvr32.exe /u <path to filter dll>` to unregister the filter.
+The preview **requires an existing compatible WinUSB binding**. It does not
+provision USB drivers or add anything to Windows certificate stores. The original
+legacy full installer did both; it is not the package built here. An existing
+CL-Eye WinUSB binding is compatible, and its 32-bit filter is preserved.
 
-If the DLL was built with a debug configuration it's possible to use WinDBG to set a breakpoint in the filter code which will be hit when using the camera with any DirectShow application.
+This preview uses a separate upgrade family and blocks coexistence with the legacy
+PS3 Eye Universal Driver MSI. Migration must first establish which package owns
+the USB binding: uninstalling a legacy full package can remove that binding.
+Clean-machine install, upgrade/rollback and signing are still release gates.
+No signed production release of this fork has been published.
 
-To build the installer, first build the 32 and 64 bit release configurations of the solution. Then right click on the PS3EyeInstaller project in the solution explorer and click build.
+## Further work
 
-## TODO
-- Manual exposure and white balance controls
-- Windows Media Foundation source?
+See [the scoped security/stability review](docs/REVIEW.md) and
+[the implementation roadmap](tasks/DRIVER_ROADMAP.md). The major remaining items
+are USB-disconnection recovery, dependency updates, image controls, and a Media
+Foundation source for Windows Camera. Passing the current tests is not a security
+certification or a substitute for those checks.

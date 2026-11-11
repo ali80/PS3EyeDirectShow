@@ -183,6 +183,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="PS3EyeGuids.h" />
+    <ClInclude Include="PS3EyeMediaType.h" />
     <ClInclude Include="PS3EyeSourceFilter.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>

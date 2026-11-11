@@ -33,6 +33,7 @@ public:
 	}
 
 	HRESULT CheckMediaType(const CMediaType *);
+	HRESULT SetMediaType(const CMediaType *);
 	HRESULT GetMediaType(int iPosition, CMediaType *pMediaType);
 	HRESULT DecideBufferSize(IMemAllocator *pAlloc, ALLOCATOR_PROPERTIES *pRequest);
 	
