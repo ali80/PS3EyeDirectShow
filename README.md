@@ -71,6 +71,25 @@ the USB binding: uninstalling a legacy full package can remove that binding.
 Clean-machine install, upgrade/rollback and signing are still release gates.
 No signed production release of this fork has been published.
 
+## Portable multi-camera capture helper
+
+`scripts/build-and-test.ps1` also builds
+`artifacts/<platform>/capture/ps3eye-capture.exe` and tests its limited-range YUV420
+conversion. The helper enables the sibling Go recorder to select distinct PS3 Eyes
+without registering a replacement DirectShow filter. It does not make multiple
+PS3 Eyes appear as separate DirectShow webcams to other applications.
+
+`--list` prints JSON USB port IDs without streaming. `--device <id>` captures only
+that port at 640×480, 15 fps and writes binary YUV420 to stdout. It never falls back
+to the first available camera. The owning recorder reads the stream, sends a byte
+on stdin to stop cleanly, and terminates a stalled helper after a bounded timeout.
+Do not run raw capture in an interactive terminal. It saves no files and plays no
+audio. USB port identity depends on keeping cameras in the same physical ports.
+The existing WinUSB driver binding is required on each camera.
+
+This uses the existing native dependencies and retains their review limitations;
+the helper is not a new kernel driver or a security certification.
+
 ## Further work
 
 See [the scoped security/stability review](docs/REVIEW.md) and

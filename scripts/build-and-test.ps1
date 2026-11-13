@@ -23,4 +23,7 @@ try {
     Build-Project 'tests\capture_contract_tests.vcxproj' "$projectRoot\"
     & (Join-Path $projectRoot "artifacts\$Platform\tests\capture_contract_tests.exe")
     if ($LASTEXITCODE -ne 0) { throw 'Capture contract tests failed.' }
+    Build-Project 'tools\capture\ps3eye-capture.vcxproj' "$projectRoot\"
+    & (Join-Path $projectRoot "artifacts\$Platform\capture\ps3eye-capture.exe") --self-test
+    if ($LASTEXITCODE -ne 0) { throw 'Capture helper conversion tests failed.' }
 } finally { Pop-Location }
