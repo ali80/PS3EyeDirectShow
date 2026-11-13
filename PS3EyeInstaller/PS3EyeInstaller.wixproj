@@ -30,24 +30,10 @@
     <Compile Include="Product.wxs" />
   </ItemGroup>
   <ItemGroup>
-    <WixExtension Include="WixIIsExtension">
-      <HintPath>$(WixExtDir)\WixIIsExtension.dll</HintPath>
-      <Name>WixIIsExtension</Name>
-    </WixExtension>
-    <WixExtension Include="WixDifxAppExtension">
-      <HintPath>$(WixExtDir)\WixDifxAppExtension.dll</HintPath>
-      <Name>WixDifxAppExtension</Name>
-    </WixExtension>
     <WixExtension Include="WixUIExtension">
       <HintPath>$(WixExtDir)\WixUIExtension.dll</HintPath>
       <Name>WixUIExtension</Name>
     </WixExtension>
-  </ItemGroup>
-  <ItemGroup>
-    <WixLibrary Include="difxapp_x64">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\WiX Toolset v3.11\bin\difxapp_x64.wixlib</HintPath>
-      <Name>difxapp_x64</Name>
-    </WixLibrary>
   </ItemGroup>
   <Import Project="$(WixTargetsPath)" Condition=" '$(WixTargetsPath)' != '' " />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets" Condition=" '$(WixTargetsPath)' == '' AND Exists('$(MSBuildExtensionsPath32)\Microsoft\WiX\v3.x\Wix.targets') " />

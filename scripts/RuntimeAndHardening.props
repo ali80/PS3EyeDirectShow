@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Apply after project settings, including the pinned libusb submodule.
+       Mixing its static CRT with the filter's dynamic CRT causes LNK4098. -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+    </ClCompile>
+    <Link>
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <HighEntropyVA Condition="'$(Platform)'=='x64'">true</HighEntropyVA>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

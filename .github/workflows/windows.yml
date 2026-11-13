@@ -1,0 +1,36 @@
+name: Windows build and capture contracts
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+      - name: Build and test x64
+        shell: pwsh
+        run: ./scripts/build-and-test.ps1 -Platform x64
+      - name: Build and test Win32
+        shell: pwsh
+        run: ./scripts/build-and-test.ps1 -Platform Win32
+      - name: Fetch pinned WiX tools
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path .work -Force | Out-Null
+          Invoke-WebRequest https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip -OutFile .work/wix314.zip
+          $expected = '6AC824E1642D6F7277D0ED7EA09411A508F6116BA6FAE0AA5F2C7DAA2FF43D31'
+          if ((Get-FileHash .work/wix314.zip -Algorithm SHA256).Hash -ne $expected) { throw 'WiX checksum mismatch' }
+          Expand-Archive .work/wix314.zip .work/wix314
+      - name: Build and inspect filter-only MSI
+        shell: pwsh
+        run: ./scripts/build-installer.ps1 -WixBinPath .work/wix314
